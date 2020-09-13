@@ -1,13 +1,13 @@
 # Inventory Value Overlay Plugin
 
 The inventory value overlay plugin calculates a RuneLite users inventory value and displays it on the game screen as an overlay. 
-![Overlay ](./screenshots/inventory_value_overlay_ss.png "Optional Title")
+![Overlay ](/screenshots/inventory_value_overlay_ss.png "Overlay")
 
 ## Usage
 Available as part of the plugin-hub. Search "Inventory Value Overlay" on plugin-hub to install.
 
 ## Configuration Options
-![Configuration](./screenshots/inventory_value_config_ss.png "Optional Title")
+![Configuration](/screenshots/inventory_value_config_ss.png "Configuration")
 
 ### Use HighAlchemy Value
 When checked, the inventory values calculation will use the coin value received from casting high alchemy on the item.
