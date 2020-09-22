@@ -42,6 +42,7 @@ import java.awt.*;
  */
 public class InventoryValueOverlay extends Overlay {
     private Long inventoryValue;
+    private long profitValue;
     private final InventoryValueConfig ivConfig;
     private final PanelComponent panelComponent = new PanelComponent();
 
@@ -51,6 +52,7 @@ public class InventoryValueOverlay extends Overlay {
         // TODO -- this should be part of config...
         setPosition(OverlayPosition.ABOVE_CHATBOX_RIGHT);
         inventoryValue = 0L;
+        profitValue = 0L;
         ivConfig = config;
     }
 
@@ -84,6 +86,12 @@ public class InventoryValueOverlay extends Overlay {
                 .right(Long.toString(inventoryValue))
                 .build());
 
+        // Profit
+        panelComponent.getChildren().add(LineComponent.builder()
+                .left("Profit:")
+                .right(Long.toString(profitValue))
+                .build());
+
         return panelComponent.render(graphics);
     }
 
@@ -95,6 +103,20 @@ public class InventoryValueOverlay extends Overlay {
         SwingUtilities.invokeLater(() -> {
             inventoryValue = newValue;
         });
+
+
+    }
+
+    /**
+     * Updates profit value display
+     * @param newValue the value to update the profitValue's {{@link #panelComponent}} with.
+     */
+    public void updateProfitValue(final long newValue) {
+        SwingUtilities.invokeLater(() -> {
+            profitValue = newValue;
+        });
+
+
     }
 
 

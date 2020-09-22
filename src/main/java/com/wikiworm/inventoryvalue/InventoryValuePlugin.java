@@ -53,6 +53,11 @@ import java.util.stream.LongStream;
 )
 public class InventoryValuePlugin extends Plugin
 {
+    // the profit will be calculated against this value
+    private long StartingInventoryValue;
+    private long CurrentInventoryValue;
+    private long CurrentProfit;
+
     @Inject
     private Client client;
 
@@ -73,6 +78,12 @@ public class InventoryValuePlugin extends Plugin
     {
         // Add the inventory overlay
         overlayManager.add(overlay);
+
+        ResetProfitCalculation();
+
+        updateInventoryValue();
+        updateProfit();
+
     }
 
     @Override
@@ -80,6 +91,7 @@ public class InventoryValuePlugin extends Plugin
     {
         // Remove the inventory overlay
         overlayManager.remove(overlay);
+
     }
 
     @Subscribe
@@ -92,17 +104,38 @@ public class InventoryValuePlugin extends Plugin
     public void onItemContainerChanged(ItemContainerChanged event)
     {
         if(event.getContainerId() == InventoryID.INVENTORY.getId()) {
-            long inventoryValue = 0;
-            ItemContainer container = client.getItemContainer(InventoryID.INVENTORY);
-            if(container != null) {
-                Item[] items = container.getItems();
-                inventoryValue = Arrays.stream(items).parallel().flatMapToLong(item -> {
-                    return LongStream.of(calculateItemValue(item));
-                }).sum();
-                // Update the panel
-                overlay.updateInventoryValue(inventoryValue);
-            }
+            updateInventoryValue();
+            updateProfit();
         }
+    }
+
+    // calculate and update inventory value both in plugin and overlay
+    private void updateInventoryValue()
+    {
+        ItemContainer container = client.getItemContainer(InventoryID.INVENTORY);
+        if(container != null) {
+            Item[] items = container.getItems();
+            CurrentInventoryValue = Arrays.stream(items).parallel().flatMapToLong(item -> {
+                return LongStream.of(calculateItemValue(item));
+            }).sum();
+            // Update the panel
+            overlay.updateInventoryValue(CurrentInventoryValue);
+        }
+    }
+
+    // start profit calculation from this point
+    private void ResetProfitCalculation()
+    {
+        updateInventoryValue();
+
+        StartingInventoryValue = CurrentInventoryValue;
+    }
+
+    // calculate and update profit value both in plugin and overlay
+    private void updateProfit()
+    {
+        CurrentProfit = CurrentInventoryValue - StartingInventoryValue;
+        overlay.updateProfitValue(CurrentProfit);
     }
 
     public long calculateItemValue(Item item) {
@@ -118,6 +151,7 @@ public class InventoryValuePlugin extends Plugin
 
         return itemValue;
     }
+
     @Provides
     InventoryValueConfig provideConfig(ConfigManager configManager)
     {
