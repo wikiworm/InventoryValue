@@ -36,6 +36,7 @@ import javax.inject.Inject;
 import javax.swing.*;
 import java.awt.*;
 
+import java.text.DecimalFormat;
 /**
  * The InventoryValueOverlay class is used to display the value of the users inventory as an overlay
  * on the RuneLite client gameplay panel.
@@ -46,6 +47,10 @@ public class InventoryValueOverlay extends Overlay {
     private final InventoryValueConfig ivConfig;
     private final PanelComponent panelComponent = new PanelComponent();
 
+    public static String FormatIntegerWithCommas(long value) {
+        DecimalFormat df = new DecimalFormat("###,###,###");
+        return df.format(value);
+    }
     @Inject
     private InventoryValueOverlay(InventoryValueConfig config)
     {
@@ -83,13 +88,13 @@ public class InventoryValueOverlay extends Overlay {
         // Build line on the overlay for world number
         panelComponent.getChildren().add(LineComponent.builder()
                 .left(valueString)
-                .right(Long.toString(inventoryValue))
+                .right(FormatIntegerWithCommas(inventoryValue))
                 .build());
 
         // Profit
         panelComponent.getChildren().add(LineComponent.builder()
                 .left("Profit:")
-                .right(Long.toString(profitValue))
+                .right(FormatIntegerWithCommas(profitValue))
                 .build());
 
         return panelComponent.render(graphics);
