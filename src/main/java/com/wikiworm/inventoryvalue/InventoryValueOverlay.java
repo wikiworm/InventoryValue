@@ -33,52 +33,44 @@ import net.runelite.client.ui.overlay.components.PanelComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 
 import javax.inject.Inject;
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.SwingUtilities;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
 
-/**
- * The InventoryValueOverlay class is used to display the value of the users inventory as an overlay
- * on the RuneLite client gameplay panel.
- */
-public class InventoryValueOverlay extends Overlay {
+
+public class InventoryValueOverlay extends Overlay
+{
     private Long inventoryValue;
-    private final InventoryValueConfig ivConfig;
+    private final InventoryValueConfig inventoryValueConfig;
     private final PanelComponent panelComponent = new PanelComponent();
 
     @Inject
     private InventoryValueOverlay(InventoryValueConfig config)
     {
-        // TODO -- this should be part of config...
         setPosition(OverlayPosition.ABOVE_CHATBOX_RIGHT);
-        inventoryValue = 0L;
-        ivConfig = config;
+        this.inventoryValue = 0L;
+        this.inventoryValueConfig = config;
     }
 
-    /**
-     * Render the item value overlay.
-     * @param graphics the 2D graphics
-     * @return the value of {@link PanelComponent#render(Graphics2D)} from this panel implementation.
-     */
     @Override
-    public Dimension render(Graphics2D graphics) {
-        String titleText = "Inventory Value:";
-        String valueString = ivConfig.useHighAlchemyValue() ? "HA Price:" : "GE price:";
+    public Dimension render(Graphics2D graphics)
+    {
+        String titleText = "Inventory Value";
+        String valueString = inventoryValueConfig.useHighAlchemyValue() ? "HA Price:" : "GE Price:";
 
-        // Not sure how this can occur, but it was recommended to do so
         panelComponent.getChildren().clear();
 
-        // Build overlay title
         panelComponent.getChildren().add(TitleComponent.builder()
                 .text(titleText)
                 .color(Color.GREEN)
                 .build());
 
-        // Set the size of the overlay (width)
         panelComponent.setPreferredSize(new Dimension(
                 graphics.getFontMetrics().stringWidth(titleText) + 30,
-                0));
+                0
+        ));
 
-        // Build line on the overlay for world number
         panelComponent.getChildren().add(LineComponent.builder()
                 .left(valueString)
                 .right(Long.toString(inventoryValue))
@@ -87,15 +79,8 @@ public class InventoryValueOverlay extends Overlay {
         return panelComponent.render(graphics);
     }
 
-    /**
-     * Updates inventory value display
-     * @param newValue the value to update the InventoryValue's {{@link #panelComponent}} with.
-     */
-    public void updateInventoryValue(final long newValue) {
-        SwingUtilities.invokeLater(() -> {
-            inventoryValue = newValue;
-        });
+    public void updateInventoryValue(final long newValue)
+    {
+        SwingUtilities.invokeLater(() -> inventoryValue = newValue);
     }
-
-
 }
