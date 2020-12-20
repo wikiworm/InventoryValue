@@ -49,7 +49,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.LongStream;
 
-@PluginDescriptor(name = "Inventory Value Tracker")
+@PluginDescriptor(name = "Inventory Value")
 @Slf4j
 public class InventoryValuePlugin extends Plugin
 {
