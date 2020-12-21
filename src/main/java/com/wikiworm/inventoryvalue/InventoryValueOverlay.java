@@ -26,11 +26,13 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package com.wikiworm.inventoryvalue;
+
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.PanelComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
+import net.runelite.client.util.QuantityFormatter;
 
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
@@ -73,7 +75,7 @@ public class InventoryValueOverlay extends Overlay
 
         panelComponent.getChildren().add(LineComponent.builder()
                 .left(valueString)
-                .right(Long.toString(inventoryValue))
+                .right(QuantityFormatter.quantityToStackSize(inventoryValue))
                 .build());
 
         return panelComponent.render(graphics);
