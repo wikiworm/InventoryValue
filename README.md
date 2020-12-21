@@ -21,7 +21,7 @@ When checked, the inventory value calculation will ignore coins in the user's in
 When a comma or semicolon separated list of item names is provided, those items will not be included in the inventory value.
 
 ![Ignoring Items](https://user-images.githubusercontent.com/5294864/102701261-2b23ff00-4223-11eb-97c6-0ccc197d2896.png)
-![Ignored Item Demonstration](https://user-images.githubusercontent.com/5294864/102701219-a802a900-4222-11eb-9aa7-6d5424ca0d47.png)
+![image](https://user-images.githubusercontent.com/5294864/102736363-bcbe6a00-4312-11eb-8417-bf0d69f517ac.png)
 
 # Building the Plugin
 
