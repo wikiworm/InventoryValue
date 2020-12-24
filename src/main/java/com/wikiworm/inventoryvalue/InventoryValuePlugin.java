@@ -28,9 +28,13 @@
 package com.wikiworm.inventoryvalue;
 
 import com.google.inject.Provides;
-import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.*;
+import net.runelite.api.Client;
+import net.runelite.api.InventoryID;
+import net.runelite.api.Item;
+import net.runelite.api.ItemComposition;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.ItemID;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.client.config.ConfigManager;
@@ -40,17 +44,13 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 
+import javax.inject.Inject;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.LongStream;
 
-/**
- * The InventoryValuePlugin class is used as the injection point for calculating a user logged into RuneLite client's
- * inventory value.
- */
+@PluginDescriptor(name = "Inventory Value")
 @Slf4j
-@PluginDescriptor(
-        name = "Inventory Value Overlay"
-)
 public class InventoryValuePlugin extends Plugin
 {
     @Inject
@@ -71,53 +71,61 @@ public class InventoryValuePlugin extends Plugin
     @Override
     protected void startUp() throws Exception
     {
-        // Add the inventory overlay
         overlayManager.add(overlay);
     }
 
     @Override
     protected void shutDown() throws Exception
     {
-        // Remove the inventory overlay
         overlayManager.remove(overlay);
     }
 
     @Subscribe
     public void onGameStateChanged(GameStateChanged gameStateChanged)
     {
-
     }
 
     @Subscribe
     public void onItemContainerChanged(ItemContainerChanged event)
     {
-        if(event.getContainerId() == InventoryID.INVENTORY.getId()) {
-            long inventoryValue = 0;
+        if (event.getContainerId() == InventoryID.INVENTORY.getId())
+        {
+            long inventoryValue;
+            List<String> ignoredItems = buildIgnoredItemsList();
+
             ItemContainer container = client.getItemContainer(InventoryID.INVENTORY);
-            if(container != null) {
+            if (container != null)
+            {
                 Item[] items = container.getItems();
-                inventoryValue = Arrays.stream(items).parallel().flatMapToLong(item -> {
-                    return LongStream.of(calculateItemValue(item));
-                }).sum();
-                // Update the panel
+                inventoryValue = Arrays.stream(items).parallel().flatMapToLong(item ->
+                        LongStream.of(calculateItemValue(item, ignoredItems))).sum();
+
                 overlay.updateInventoryValue(inventoryValue);
             }
         }
     }
 
-    public long calculateItemValue(Item item) {
-        int itemId = item.getId();
-        ItemComposition itemComp = itemManager.getItemComposition(itemId);
-        String itemName = itemComp.getName();
-        int itemValue;
-        // if ignore coins is set, calculate item value as 0
-        if (itemId == ItemID.COINS_995 && config.ignoreCoins())
-            itemValue = 0;
-        else // multiply quantity by HA value or GE value
-            itemValue = item.getQuantity() * (config.useHighAlchemyValue() ? itemComp.getHaPrice() : itemManager.getItemPrice(item.getId()));
-
-        return itemValue;
+    public List<String> buildIgnoredItemsList()
+    {
+        List<String> ignoredItemsList = Arrays.asList(config.ignoreItems().toLowerCase().split("[,;]"));
+        ignoredItemsList.replaceAll(String::trim);
+        return ignoredItemsList;
     }
+
+    public long calculateItemValue(Item item, List<String> ignoredItems)
+    {
+        int itemId = item.getId();
+        ItemComposition itemComposition = itemManager.getItemComposition(itemId);
+        String itemName = itemComposition.getName();
+
+        if ((itemId == ItemID.COINS_995 && config.ignoreCoins()) || ignoredItems.contains(itemName.toLowerCase()))
+        {
+            return 0;
+        }
+        return (long) item.getQuantity() * (config.useHighAlchemyValue() ?
+                itemComposition.getHaPrice() : itemManager.getItemPrice(item.getId()));
+    }
+
     @Provides
     InventoryValueConfig provideConfig(ConfigManager configManager)
     {

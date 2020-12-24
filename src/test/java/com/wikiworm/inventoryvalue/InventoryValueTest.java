@@ -27,13 +27,8 @@
  */
 package com.wikiworm.inventoryvalue;
 
-import net.runelite.api.Item;
-import net.runelite.api.ItemID;
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;
-import net.runelite.client.game.ItemManager;
-import org.junit.Assert;
-import org.junit.Test;
 
 public class InventoryValueTest
 {
