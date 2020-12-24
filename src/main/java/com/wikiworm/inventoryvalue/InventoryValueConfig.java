@@ -24,7 +24,7 @@ public interface InventoryValueConfig extends Config
     @ConfigItem(
             keyName = "ignoreItems",
             name = "Ignore Items",
-            description = "Ignore particular items in inventory. By default, no items are ignored."
+            description = "Ignore defined items in inventory. By default, no items are ignored."
     )
     default String ignoreItems() { return ""; }
 }

@@ -115,15 +115,20 @@ public class InventoryValuePlugin extends Plugin
     public long calculateItemValue(Item item, List<String> ignoredItems)
     {
         int itemId = item.getId();
-        ItemComposition itemComposition = itemManager.getItemComposition(itemId);
-        String itemName = itemComposition.getName();
+        if(itemManager != null) {
+            ItemComposition itemComposition = itemManager.getItemComposition(itemId);
+            String itemName = itemComposition.getName();
 
-        if ((itemId == ItemID.COINS_995 && config.ignoreCoins()) || ignoredItems.contains(itemName.toLowerCase()))
-        {
-            return 0;
+            if ((itemId == ItemID.COINS_995 && config.ignoreCoins()) || ignoredItems.contains(itemName.toLowerCase()))
+            {
+                return 0L;
+            }
+            return (long) item.getQuantity() * (config.useHighAlchemyValue() ?
+                    itemComposition.getHaPrice() : itemManager.getItemPrice(item.getId()));
+        } else {
+            return 0L;
         }
-        return (long) item.getQuantity() * (config.useHighAlchemyValue() ?
-                itemComposition.getHaPrice() : itemManager.getItemPrice(item.getId()));
+
     }
 
     @Provides

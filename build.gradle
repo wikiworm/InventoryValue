@@ -18,7 +18,7 @@ dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.4'
     annotationProcessor 'org.projectlombok:lombok:1.18.4'
 
-    testCompile 'org.mockito:mockito-core:2.7.22'
+    testCompile group: 'org.mockito', name: 'mockito-core', version: '3.6.28'
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.slf4j:slf4j-simple:1.7.12'
     testImplementation 'com.google.inject.extensions:guice-testlib:4.1.0'
