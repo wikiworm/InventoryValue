@@ -106,8 +106,7 @@ public class InventoryValuePluginTest
     }
 
     @Test
-    public void testBuildIgnoredItemsList()
-    {
+    public void testBuildIgnoredItemsList() {
         // split on comma, ignore leading whitespace
         String ignoreItemsString = "foo, bar";
         when(config.ignoreItems()).thenReturn(ignoreItemsString);
@@ -126,8 +125,7 @@ public class InventoryValuePluginTest
         assertEquals(Arrays.asList("foo", "bar", "baz"), inventoryValuePlugin.buildIgnoredItemsList());
     }
 
-    public void coinsValueTestSetup()
-    {
+    public void coinsValueTestSetup() {
         itemId = ItemID.COINS_995;
         quantity = 3201;
         coins = new Item(itemId, quantity);
@@ -139,8 +137,7 @@ public class InventoryValuePluginTest
     }
 
     @Test
-    public void testCoinsIgnoredWhenIgnoreCoinsIsSet()
-    {
+    public void testCoinsIgnoredWhenIgnoreCoinsIsSet() {
         coinsValueTestSetup();
 
         when(config.ignoreCoins()).thenReturn(true);
@@ -149,8 +146,7 @@ public class InventoryValuePluginTest
     }
 
     @Test
-    public void testCoinsNotIgnoredWhenIgnoreCoinsIsNotSet()
-    {
+    public void testCoinsNotIgnoredWhenIgnoreCoinsIsNotSet() {
         coinsValueTestSetup();
 
         when(config.ignoreCoins()).thenReturn(false);
@@ -158,8 +154,7 @@ public class InventoryValuePluginTest
         assertEquals(quantity, inventoryValuePlugin.calculateItemValue(coins, ignoredItemsList));
     }
 
-    public void ignoreItemTestSetup(int itemId, String itemName, int itemValue)
-    {
+    public void ignoreItemTestSetup(int itemId, String itemName, int itemValue) {
         quantity = 1;
         testItem = new Item(itemId, quantity);
         ignoredItemsConfig = "Bottomless compost bucket, Leather chaps";
@@ -171,8 +166,7 @@ public class InventoryValuePluginTest
     }
 
     @Test
-    public void testItemNotIgnoredWhenNotInIgnoredItems()
-    {
+    public void testItemNotIgnoredWhenNotInIgnoredItems() {
         int testItemValue = 40000000;
         ignoreItemTestSetup(ItemID.SARADOMIN_GODSWORD, "Saradomin godsword", testItemValue);
 
@@ -180,8 +174,7 @@ public class InventoryValuePluginTest
     }
 
     @Test
-    public void testItemIgnoredWhenInIgnoredItems()
-    {
+    public void testItemIgnoredWhenInIgnoredItems() {
         int testItemValue = 300000;
         ignoreItemTestSetup(ItemID.BOTTOMLESS_COMPOST_BUCKET, "Bottomless compost bucket", testItemValue);
 

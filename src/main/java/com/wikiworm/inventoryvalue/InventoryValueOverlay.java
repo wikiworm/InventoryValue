@@ -48,16 +48,14 @@ public class InventoryValueOverlay extends Overlay
     private final PanelComponent panelComponent = new PanelComponent();
 
     @Inject
-    private InventoryValueOverlay(InventoryValueConfig config)
-    {
+    private InventoryValueOverlay(InventoryValueConfig config) {
         setPosition(OverlayPosition.ABOVE_CHATBOX_RIGHT);
         this.inventoryValue = 0L;
         this.inventoryValueConfig = config;
     }
 
     @Override
-    public Dimension render(Graphics2D graphics)
-    {
+    public Dimension render(Graphics2D graphics) {
         String titleText = "Inventory Value";
         String valueString = inventoryValueConfig.useHighAlchemyValue() ? "HA Price:" : "GE Price:";
 
@@ -81,8 +79,7 @@ public class InventoryValueOverlay extends Overlay
         return panelComponent.render(graphics);
     }
 
-    public void updateInventoryValue(final long newValue)
-    {
+    public void updateInventoryValue(final long newValue) {
         SwingUtilities.invokeLater(() -> inventoryValue = newValue);
     }
 }
