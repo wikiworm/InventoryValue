@@ -15,7 +15,7 @@ def runeLiteVersion = '1.8.25'
 dependencies {
     compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
 
-    testImplementation 'org.projectlombok:lombok:1.18.20'
+    compileOnly 'org.projectlombok:lombok:1.18.20'
     annotationProcessor 'org.projectlombok:lombok:1.18.20'
 
     testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.6.28'
