@@ -63,6 +63,11 @@ public class InventoryValuePlugin extends Plugin
     @Inject
     private InventoryValueOverlay overlay;
 
+    private long _oldInventoryValue         = Long.MIN_VALUE;
+    private long _oldProfitInvValue         = Long.MIN_VALUE;
+    private long _originalBankValue         = Long.MIN_VALUE;
+    private long _lastBankValue             = Long.MIN_VALUE;
+
     @Override
     protected void startUp() throws Exception {
         overlayManager.add(overlay);
@@ -79,19 +84,46 @@ public class InventoryValuePlugin extends Plugin
 
     @Subscribe
     public void onItemContainerChanged(ItemContainerChanged event) {
-        if (event.getContainerId() == InventoryID.INVENTORY.getId()) {
-            long inventoryValue;
-            List<String> ignoredItems = buildIgnoredItemsList();
+        log.info(String.format("entering: oiv %s opiv %s obv %s lbv %s", _oldInventoryValue, _oldProfitInvValue, _originalBankValue, _lastBankValue));
+        long inventoryValue, bankValue, profitInvValue, profitBankValue;
+        inventoryValue = profitInvValue = profitBankValue = 0;
+        final List<String> ignoredItems = buildIgnoredItemsList();
 
-            ItemContainer container = client.getItemContainer(InventoryID.INVENTORY);
+        ItemContainer container = client.getItemContainer(InventoryID.INVENTORY);
+        if (container != null) {
+            Item[] items = container.getItems();
+            inventoryValue = Arrays.stream(items).flatMapToLong(item ->
+                    LongStream.of(calculateItemValue(item, ignoredItems))).sum();
+        }
+        if(_oldProfitInvValue == Long.MIN_VALUE) profitInvValue = 0;
+        else if(event.getContainerId() != InventoryID.BANK.getId()) {
+            // subtract the old inventory value from the latest inventory value then and add our existing profit
+            profitInvValue = (inventoryValue - _oldInventoryValue) + _oldProfitInvValue;
+        }
+
+        // check if we're banking...
+        if(event.getContainerId() == InventoryID.BANK.getId()) {
+            container = client.getItemContainer(InventoryID.BANK);
             if (container != null) {
                 Item[] items = container.getItems();
-                inventoryValue = Arrays.stream(items).flatMapToLong(item ->
+                bankValue = Arrays.stream(items).flatMapToLong(item ->
                         LongStream.of(calculateItemValue(item, ignoredItems))).sum();
 
-                overlay.updateInventoryValue(inventoryValue);
+                if(_originalBankValue == Long.MIN_VALUE) _originalBankValue = bankValue;
+
+                profitBankValue = bankValue - _originalBankValue;
+                _lastBankValue = bankValue;
             }
+        } else {
+            profitBankValue = _lastBankValue - _originalBankValue;
         }
+
+
+        log.info(String.format("displaying: oiv %s pbv %s piv %s ",inventoryValue, profitBankValue, profitInvValue));
+        overlay.updateInventoryValue(inventoryValue, profitInvValue, profitBankValue);
+        _oldInventoryValue = inventoryValue;
+        _oldProfitInvValue = profitInvValue;
+        log.info(String.format("exiting: oiv %s opiv %s obv %s lbv %s", _oldInventoryValue, _oldProfitInvValue, _originalBankValue, _lastBankValue));
     }
 
     public List<String> buildIgnoredItemsList() {
@@ -106,11 +138,14 @@ public class InventoryValuePlugin extends Plugin
             ItemComposition itemComposition = itemManager.getItemComposition(itemId);
             String itemName = itemComposition.getName();
 
-            if ((itemId == ItemID.COINS_995 && config.ignoreCoins()) || ignoredItems.contains(itemName.toLowerCase())) {
+            if ((itemId == ItemID.COINS_995 && config.ignoreCoins())) return 0L;
+            else if(itemId == ItemID.COINS_995) return item.getQuantity();
+            else if (ignoredItems.contains(itemName.toLowerCase())) {
                 return 0L;
             }
-            return (long) item.getQuantity() * (config.useHighAlchemyValue() ?
-                    itemComposition.getHaPrice() : itemManager.getItemPrice(item.getId()));
+            long itemValue = (long) item.getQuantity() * (config.useHighAlchemyValue() ?
+                    itemComposition.getHaPrice() : itemManager.getItemPrice(itemId));
+            return itemValue;
         } else {
             return 0L;
         }

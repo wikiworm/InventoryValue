@@ -27,4 +27,11 @@ public interface InventoryValueConfig extends Config
             description = "Ignore defined items in inventory. By default, no items are ignored."
     )
     default String ignoreItems() { return ""; }
+
+    @ConfigItem(
+            keyName = "calculateProfit",
+            name = "Calculate profit",
+            description = "Calculate bank and inventory profit change."
+    )
+    default boolean displayProfit() { return false; }
 }
