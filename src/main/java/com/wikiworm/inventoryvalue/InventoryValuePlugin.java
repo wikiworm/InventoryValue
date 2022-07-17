@@ -84,7 +84,6 @@ public class InventoryValuePlugin extends Plugin
 
     @Subscribe
     public void onItemContainerChanged(ItemContainerChanged event) {
-        log.info(String.format("entering: oiv %s opiv %s obv %s lbv %s", _oldInventoryValue, _oldProfitInvValue, _originalBankValue, _lastBankValue));
         long inventoryValue, bankValue, profitInvValue, profitBankValue;
         inventoryValue = profitInvValue = profitBankValue = 0;
         final List<String> ignoredItems = buildIgnoredItemsList();
@@ -117,13 +116,9 @@ public class InventoryValuePlugin extends Plugin
         } else {
             profitBankValue = _lastBankValue - _originalBankValue;
         }
-
-
-        log.info(String.format("displaying: oiv %s pbv %s piv %s ",inventoryValue, profitBankValue, profitInvValue));
         overlay.updateInventoryValue(inventoryValue, profitInvValue, profitBankValue);
         _oldInventoryValue = inventoryValue;
         _oldProfitInvValue = profitInvValue;
-        log.info(String.format("exiting: oiv %s opiv %s obv %s lbv %s", _oldInventoryValue, _oldProfitInvValue, _originalBankValue, _lastBankValue));
     }
 
     public List<String> buildIgnoredItemsList() {
@@ -138,14 +133,16 @@ public class InventoryValuePlugin extends Plugin
             ItemComposition itemComposition = itemManager.getItemComposition(itemId);
             String itemName = itemComposition.getName();
 
-            if ((itemId == ItemID.COINS_995 && config.ignoreCoins())) return 0L;
-            else if(itemId == ItemID.COINS_995) return item.getQuantity();
-            else if (ignoredItems.contains(itemName.toLowerCase())) {
+            if ((itemId == ItemID.COINS_995 && config.ignoreCoins())) {
+                return 0L;
+            } else if(itemId == ItemID.COINS_995) {
+                return item.getQuantity();
+            } else if (ignoredItems.contains(itemName.toLowerCase())) {
                 return 0L;
             }
-            long itemValue = (long) item.getQuantity() * (config.useHighAlchemyValue() ?
+
+            return (long) item.getQuantity() * (config.useHighAlchemyValue() ?
                     itemComposition.getHaPrice() : itemManager.getItemPrice(itemId));
-            return itemValue;
         } else {
             return 0L;
         }

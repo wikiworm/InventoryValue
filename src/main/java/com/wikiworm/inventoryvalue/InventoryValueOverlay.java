@@ -112,10 +112,12 @@ public class InventoryValueOverlay extends Overlay
         final Color updateBankProfitColor = newProfitBankValue >= 0 ? Color.GREEN : Color.RED;
         SwingUtilities.invokeLater(() -> inventoryValue = newInventoryValue);
         if(inventoryValueConfig.displayProfit()) {
-            SwingUtilities.invokeLater(() -> profitBankValue = newProfitBankValue);
-            SwingUtilities.invokeLater(() -> profitInvValue = newProfitInvValue);
-            SwingUtilities.invokeLater(() -> profitInvColor = updateInvProfitColor);
-            SwingUtilities.invokeLater(() -> profitBankColor = updateBankProfitColor);
+            SwingUtilities.invokeLater(() -> {
+                profitBankValue = newProfitBankValue;
+                profitInvValue = newProfitInvValue;
+                profitInvColor = updateInvProfitColor;
+                profitBankColor = updateBankProfitColor;
+            });
         }
     }
 
