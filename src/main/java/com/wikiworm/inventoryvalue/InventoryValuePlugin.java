@@ -30,24 +30,38 @@ package com.wikiworm.inventoryvalue;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
+import net.runelite.api.annotations.Varbit;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.client.chat.ChatMessageManager;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.http.api.item.ItemPrice;
 
 import javax.inject.Inject;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.LongStream;
+
+import static net.runelite.api.ItemID.*;
 
 @PluginDescriptor(name = "Inventory Value")
 @Slf4j
 public class InventoryValuePlugin extends Plugin
 {
+    private static final int NUM_SLOTS = 4;
+    private static final int[] AMOUNT_VARBITS = {
+            Varbits.RUNE_POUCH_AMOUNT1, Varbits.RUNE_POUCH_AMOUNT2, Varbits.RUNE_POUCH_AMOUNT3, Varbits.RUNE_POUCH_AMOUNT4
+    };
+    private static final int[] RUNE_VARBITS = {
+            Varbits.RUNE_POUCH_RUNE1, Varbits.RUNE_POUCH_RUNE2, Varbits.RUNE_POUCH_RUNE3, Varbits.RUNE_POUCH_RUNE4
+    };
+
     @Inject
     private Client client;
 
@@ -61,12 +75,18 @@ public class InventoryValuePlugin extends Plugin
     private OverlayManager overlayManager;
 
     @Inject
+    private ChatMessageManager chatMessageManager;
+
+    @Inject
     private InventoryValueOverlay overlay;
 
-    private long _oldInventoryValue         = Long.MIN_VALUE;
-    private long _oldProfitInvValue         = Long.MIN_VALUE;
-    private long _originalBankValue         = Long.MIN_VALUE;
-    private long _lastBankValue             = Long.MIN_VALUE;
+    private HashMap<ItemPrice, Integer> _herbs  = new HashMap<ItemPrice, Integer>();
+    private HashMap<ItemPrice, Integer> _gems   = new HashMap<ItemPrice, Integer>();
+    private HashMap<ItemPrice, Integer> _seeds  = new HashMap<ItemPrice, Integer>();
+    private long _oldInventoryValue     = Long.MIN_VALUE;
+    private long _oldProfitInvValue     = Long.MIN_VALUE;
+    private long _originalBankValue     = Long.MIN_VALUE;
+    private long _lastBankValue         = Long.MIN_VALUE;
 
     @Override
     protected void startUp() throws Exception {
@@ -116,9 +136,57 @@ public class InventoryValuePlugin extends Plugin
         } else {
             profitBankValue = _lastBankValue - _originalBankValue;
         }
+        inventoryValue += handleHerbSack();
+        inventoryValue += handleSeedBox();
+        inventoryValue += handleGemBag();
+
         overlay.updateInventoryValue(inventoryValue, profitInvValue, profitBankValue);
         _oldInventoryValue = inventoryValue;
         _oldProfitInvValue = profitInvValue;
+    }
+
+
+
+    @Subscribe
+    private void onMenuOptionClicked(MenuOptionClicked event)
+    {
+        if (event.getId() == 6 && (event.getItemId() == OPEN_HERB_SACK || event.getItemId() == HERB_SACK)) {
+            _herbs.clear();
+        }
+
+        if (event.getId() == 6 && (event.getItemId() == OPEN_SEED_BOX || event.getItemId() == SEED_BOX)) {
+            _seeds.clear();
+        }
+
+        if (event.getId() == 6 && (event.getItemId() == OPEN_GEM_BAG || event.getItemId() == GEM_BAG)) {
+            _seeds.clear();
+        }
+    }
+
+    @Subscribe
+    public void onChatMessage(ChatMessage chatMessage)
+    {
+        String messageString = chatMessage.getMessage();
+        if(messageString.contains("x Grimy"))
+        {
+            // split into quantity and herb name
+            String[] qtyAndHerb = chatMessage.getMessage().split(" x ");
+            if(qtyAndHerb.length == 2)
+            {
+                String herbName = qtyAndHerb[1].trim();
+                int herbQty = Integer.parseInt(qtyAndHerb[0].trim(), 10);
+                List<ItemPrice> itemPrices = itemManager.search(herbName);
+                if(itemPrices.size() == 1) {
+                    ItemPrice price = itemPrices.get(0);
+                    _herbs.put(price, herbQty);
+                }
+            }
+        }
+
+        if(messageString.compareTo("The herb sack is empty.") == 0)
+        {
+            _herbs.clear();
+        }
     }
 
     public List<String> buildIgnoredItemsList() {
@@ -130,6 +198,11 @@ public class InventoryValuePlugin extends Plugin
     public long calculateItemValue(Item item, List<String> ignoredItems) {
         int itemId = item.getId();
         if(itemManager != null) {
+            if (itemId == ItemID.RUNE_POUCH || itemId == ItemID.RUNE_POUCH_L
+                    || itemId == ItemID.DIVINE_RUNE_POUCH || itemId == ItemID.DIVINE_RUNE_POUCH_L)
+            {
+                return handleRunePouch(item);
+            }
             ItemComposition itemComposition = itemManager.getItemComposition(itemId);
             String itemName = itemComposition.getName();
 
@@ -151,5 +224,55 @@ public class InventoryValuePlugin extends Plugin
     @Provides
     InventoryValueConfig provideConfig(ConfigManager configManager) {
         return configManager.getConfig(InventoryValueConfig.class);
+    }
+
+    private long handleRunePouch(Item runePouch) {
+        final EnumComposition runepouchEnum = client.getEnum(EnumID.RUNEPOUCH_RUNE);
+        int num = 0;
+        long totalValue = 0L;
+        for (int i = 0; i < NUM_SLOTS; i++)
+        {
+            @Varbit int amountVarbit = AMOUNT_VARBITS[i];
+            int amount = client.getVarbitValue(amountVarbit);
+
+            @Varbit int runeVarbit = RUNE_VARBITS[i];
+            int runeId = client.getVarbitValue(runeVarbit);
+            int itemId = runepouchEnum.getIntValue(runeId);
+            ItemComposition itemComposition = itemManager.getItemComposition(itemId);
+
+            totalValue += (long) amount * (config.useHighAlchemyValue() ?
+                    itemComposition.getHaPrice() : itemManager.getItemPrice(itemId));
+        }
+        return totalValue;
+    }
+
+    public long handleHerbSack() {
+        long herbSackValue = 0L;
+        for(Map.Entry<ItemPrice,Integer> entry : _herbs.entrySet()) {
+            ItemComposition itemComposition = itemManager.getItemComposition(entry.getKey().getId());
+            herbSackValue += (long) entry.getValue() * (config.useHighAlchemyValue() ?
+                    itemComposition.getHaPrice() : entry.getKey().getPrice());
+        }
+        return herbSackValue;
+    }
+
+    public long handleGemBag() {
+        long gemBagValue = 0L;
+        for(Map.Entry<ItemPrice,Integer> entry : _gems.entrySet()) {
+            ItemComposition itemComposition = itemManager.getItemComposition(entry.getKey().getId());
+            gemBagValue += (long) entry.getValue() * (config.useHighAlchemyValue() ?
+                    itemComposition.getHaPrice() : entry.getKey().getPrice());
+        }
+        return gemBagValue;
+    }
+
+    public long handleSeedBox() {
+        long seedBoxValue = 0L;
+        for(Map.Entry<ItemPrice,Integer> entry : _seeds.entrySet()) {
+            ItemComposition itemComposition = itemManager.getItemComposition(entry.getKey().getId());
+            seedBoxValue += (long) entry.getValue() * (config.useHighAlchemyValue() ?
+                    itemComposition.getHaPrice() : entry.getKey().getPrice());
+        }
+        return seedBoxValue;
     }
 }
