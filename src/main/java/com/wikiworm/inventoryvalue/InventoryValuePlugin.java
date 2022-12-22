@@ -113,6 +113,9 @@ public class InventoryValuePlugin extends Plugin
             Item[] items = container.getItems();
             inventoryValue = Arrays.stream(items).flatMapToLong(item ->
                     LongStream.of(calculateItemValue(item, ignoredItems))).sum();
+            inventoryValue += handleHerbSack();
+            inventoryValue += handleSeedBox();
+            inventoryValue += handleGemBag();
         }
         if(_oldProfitInvValue == Long.MIN_VALUE) profitInvValue = 0;
         else if(event.getContainerId() != InventoryID.BANK.getId()) {
@@ -136,9 +139,6 @@ public class InventoryValuePlugin extends Plugin
         } else {
             profitBankValue = _lastBankValue - _originalBankValue;
         }
-        inventoryValue += handleHerbSack();
-        inventoryValue += handleSeedBox();
-        inventoryValue += handleGemBag();
 
         overlay.updateInventoryValue(inventoryValue, profitInvValue, profitBankValue);
         _oldInventoryValue = inventoryValue;
