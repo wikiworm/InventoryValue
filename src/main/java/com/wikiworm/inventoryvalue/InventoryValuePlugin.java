@@ -88,9 +88,17 @@ public class InventoryValuePlugin extends Plugin
     private long _originalBankValue     = Long.MIN_VALUE;
     private long _lastBankValue         = Long.MIN_VALUE;
 
+    private HashMap<String, ItemPrice> _gemLookup = new HashMap<>();
+
     @Override
     protected void startUp() throws Exception {
         overlayManager.add(overlay);
+
+        _gemLookup.put("Sapphires",itemManager.search("Uncut sapphire").get(0));
+        _gemLookup.put("Emeralds",itemManager.search("Uncut emerald").get(0));
+        _gemLookup.put("Rubies",itemManager.search("Uncut ruby").get(0));
+        _gemLookup.put("Diamonds",itemManager.search("Uncut diamond").get(0));
+        _gemLookup.put("Dragonstones",itemManager.search("Uncut dragonstone").get(0));
     }
 
     @Override
@@ -104,6 +112,15 @@ public class InventoryValuePlugin extends Plugin
 
     @Subscribe
     public void onItemContainerChanged(ItemContainerChanged event) {
+        updateInventoryValue(event);
+    }
+
+    public void updateInventoryValue(ItemContainerChanged event) {
+        boolean banking = event.getContainerId() == InventoryID.BANK.getId();
+        updateInventoryValue(banking);
+    }
+
+    public void updateInventoryValue(boolean banking) {
         long inventoryValue, bankValue, profitInvValue, profitBankValue;
         inventoryValue = profitInvValue = profitBankValue = 0;
         final List<String> ignoredItems = buildIgnoredItemsList();
@@ -113,18 +130,15 @@ public class InventoryValuePlugin extends Plugin
             Item[] items = container.getItems();
             inventoryValue = Arrays.stream(items).flatMapToLong(item ->
                     LongStream.of(calculateItemValue(item, ignoredItems))).sum();
-            inventoryValue += handleHerbSack();
-            inventoryValue += handleSeedBox();
-            inventoryValue += handleGemBag();
         }
         if(_oldProfitInvValue == Long.MIN_VALUE) profitInvValue = 0;
-        else if(event.getContainerId() != InventoryID.BANK.getId()) {
+        else if(!banking) {
             // subtract the old inventory value from the latest inventory value then and add our existing profit
             profitInvValue = (inventoryValue - _oldInventoryValue) + _oldProfitInvValue;
         }
 
         // check if we're banking...
-        if(event.getContainerId() == InventoryID.BANK.getId()) {
+        if(banking) {
             container = client.getItemContainer(InventoryID.BANK);
             if (container != null) {
                 Item[] items = container.getItems();
@@ -145,11 +159,10 @@ public class InventoryValuePlugin extends Plugin
         _oldProfitInvValue = profitInvValue;
     }
 
-
-
     @Subscribe
     private void onMenuOptionClicked(MenuOptionClicked event)
     {
+        // check option
         if (event.getId() == 6 && (event.getItemId() == OPEN_HERB_SACK || event.getItemId() == HERB_SACK)) {
             _herbs.clear();
         }
@@ -159,7 +172,20 @@ public class InventoryValuePlugin extends Plugin
         }
 
         if (event.getId() == 6 && (event.getItemId() == OPEN_GEM_BAG || event.getItemId() == GEM_BAG)) {
+            _gems.clear();
+        }
+
+        // empty option
+        if (event.getId() == 4 && (event.getItemId() == OPEN_HERB_SACK || event.getItemId() == HERB_SACK)) {
+            _herbs.clear();
+        }
+
+        if (event.getId() == 4 && (event.getItemId() == OPEN_SEED_BOX || event.getItemId() == SEED_BOX)) {
             _seeds.clear();
+        }
+
+        if (event.getId() == 4 && (event.getItemId() == OPEN_GEM_BAG || event.getItemId() == GEM_BAG)) {
+            _gems.clear();
         }
     }
 
@@ -167,6 +193,8 @@ public class InventoryValuePlugin extends Plugin
     public void onChatMessage(ChatMessage chatMessage)
     {
         String messageString = chatMessage.getMessage();
+
+        // if this is a chat message for a herb sack "check"
         if(messageString.contains("x Grimy"))
         {
             // split into quantity and herb name
@@ -179,6 +207,42 @@ public class InventoryValuePlugin extends Plugin
                 if(itemPrices.size() == 1) {
                     ItemPrice price = itemPrices.get(0);
                     _herbs.put(price, herbQty);
+                    updateInventoryValue(false);
+                }
+            }
+        }
+
+        // if this is a chat message for a gem bag "check"
+        if(messageString.contains("Sapphires:") && messageString.contains("Emeralds:")) {
+            List<String> keys = new ArrayList<String>(Arrays.asList(messageString.split("\\P{L}+")));
+            List<String> values = new ArrayList<String>(Arrays.asList(messageString.split("[^0-9]+")));
+            keys.removeIf((str)-> str.compareTo("br") == 0);
+            values.removeIf(String::isEmpty);
+            if(keys.size() == values.size()) {
+                for(int i = 0; i < keys.size(); i++) {
+                    ItemPrice price = _gemLookup.get(keys.get(i));
+                    _gems.put(price, Integer.parseInt(values.get(i)));
+                    updateInventoryValue(false);
+                }
+            }
+
+        }
+
+        // if this is a chat message for a seed box "check"
+        if(messageString.contains(" x ") && messageString.contains(" seed."))
+        {
+            // split into quantity and herb name
+            String[] qtyAndSeed = chatMessage.getMessage().split(" x ");
+            if(qtyAndSeed.length == 2)
+            {
+                // cut off the period...
+                String seedName = qtyAndSeed[1].trim().replace(".","");
+                int seedQty = Integer.parseInt(qtyAndSeed[0].trim(), 10);
+                List<ItemPrice> itemPrices = itemManager.search(seedName);
+                if(itemPrices.size() == 1) {
+                    ItemPrice price = itemPrices.get(0);
+                    _seeds.put(price, seedQty);
+                    updateInventoryValue(false);
                 }
             }
         }
@@ -186,6 +250,22 @@ public class InventoryValuePlugin extends Plugin
         if(messageString.compareTo("The herb sack is empty.") == 0)
         {
             _herbs.clear();
+        }
+
+        if(messageString.compareTo("The gem bag is empty.") == 0)
+        {
+            _gems.clear();
+        }
+
+        if(messageString.compareTo("The seed box is empty.") == 0)
+        {
+            _seeds.clear();
+        }
+
+        if(messageString.compareTo("!Reset_iv") == 0) {
+            _oldInventoryValue  = 0L;
+            _oldProfitInvValue  = 0L;
+            _lastBankValue      = 0L;
         }
     }
 
@@ -202,7 +282,14 @@ public class InventoryValuePlugin extends Plugin
                     || itemId == ItemID.DIVINE_RUNE_POUCH || itemId == ItemID.DIVINE_RUNE_POUCH_L)
             {
                 return handleRunePouch(item);
+            } else if(itemId == ItemID.GEM_BAG_12020 ||itemId == ItemID.OPEN_GEM_BAG) {
+                return handleGemBag();
+            } else if (itemId == ItemID.HERB_SACK || itemId == ItemID.OPEN_HERB_SACK) {
+                return handleHerbSack();
+            } else if (itemId == ItemID.SEED_BOX || itemId == ItemID.OPEN_SEED_BOX) {
+                return handleSeedBox();
             }
+
             ItemComposition itemComposition = itemManager.getItemComposition(itemId);
             String itemName = itemComposition.getName();
 
