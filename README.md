@@ -1,6 +1,6 @@
 # Inventory Value Overlay Plugin
 
-The inventory value overlay plugin calculates a RuneLite users inventory value and displays it on the game screen as an overlay.
+The inventory value overlay plugin calculates a RuneLite users inventory value and displays it on the game screen as an overlay. The overlay can optionally display profit for the inventory and bank.
  
 ![Overlay ](https://raw.githubusercontent.com/wikiworm/InventoryValue/dev/screenshots/inventory_value_overlay.PNG "Overlay")
 
