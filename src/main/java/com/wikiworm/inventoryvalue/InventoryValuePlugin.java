@@ -312,6 +312,7 @@ public class InventoryValuePlugin extends Plugin
             _oldInventoryValue  = 0L;
             _oldProfitInvValue  = 0L;
             _lastBankValue      = 0L;
+            updateInventoryValue(false, false);
         }
     }
 
