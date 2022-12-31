@@ -90,6 +90,9 @@ public class InventoryValuePlugin extends Plugin
 
     private HashMap<String, ItemPrice> _gemLookup = new HashMap<>();
 
+    private boolean _depositing = false;
+    private long _preDepositInventoryValue = 0L;
+
     @Override
     protected void startUp() throws Exception {
         overlayManager.add(overlay);
@@ -117,10 +120,11 @@ public class InventoryValuePlugin extends Plugin
 
     public void updateInventoryValue(ItemContainerChanged event) {
         boolean banking = event.getContainerId() == InventoryID.BANK.getId();
-        updateInventoryValue(banking);
+        boolean wornChange = event.getContainerId() == InventoryID.EQUIPMENT.getId();
+        updateInventoryValue(banking, false);
     }
 
-    public void updateInventoryValue(boolean banking) {
+    public void updateInventoryValue(boolean banking, boolean depositing) {
         long inventoryValue, bankValue, profitInvValue, profitBankValue;
         inventoryValue = profitInvValue = profitBankValue = 0;
         final List<String> ignoredItems = buildIgnoredItemsList();
@@ -132,7 +136,7 @@ public class InventoryValuePlugin extends Plugin
                     LongStream.of(calculateItemValue(item, ignoredItems))).sum();
         }
         if(_oldProfitInvValue == Long.MIN_VALUE) profitInvValue = 0;
-        else if(!banking) {
+        else if(!banking && !depositing) {
             // subtract the old inventory value from the latest inventory value then and add our existing profit
             profitInvValue = (inventoryValue - _oldInventoryValue) + _oldProfitInvValue;
         }
@@ -151,7 +155,13 @@ public class InventoryValuePlugin extends Plugin
                 _lastBankValue = bankValue;
             }
         } else {
-            profitBankValue = _lastBankValue - _originalBankValue;
+            if(depositing && _originalBankValue == Long.MIN_VALUE)  {
+                profitBankValue = _lastBankValue;
+            } else if(_originalBankValue == Long.MIN_VALUE && _lastBankValue != Long.MIN_VALUE) {
+                profitBankValue = _lastBankValue;
+            } else { // !depositing, _obv != min, _lbv != min
+                profitBankValue = _lastBankValue - _originalBankValue;
+            }
         }
 
         overlay.updateInventoryValue(inventoryValue, profitInvValue, profitBankValue);
@@ -187,6 +197,42 @@ public class InventoryValuePlugin extends Plugin
         if (event.getId() == 4 && (event.getItemId() == OPEN_GEM_BAG || event.getItemId() == GEM_BAG)) {
             _gems.clear();
         }
+
+        boolean inDepositWindow = false;
+        if(event.getMenuOption().compareTo("Deposit") == 0) {
+            _depositing = true;
+            inDepositWindow = true;
+            final List<String> ignoredItems = buildIgnoredItemsList();
+
+            ItemContainer container = client.getItemContainer(InventoryID.INVENTORY);
+            if (container != null) {
+                Item[] items = container.getItems();
+                _preDepositInventoryValue = Arrays.stream(items).flatMapToLong(item ->
+                        LongStream.of(calculateItemValue(item, ignoredItems))).sum();
+            }
+        }
+
+        if(!event.getMenuOption().contains("Deposit") && _depositing && !inDepositWindow) {
+            _depositing = false;
+            final List<String> ignoredItems = buildIgnoredItemsList();
+
+            ItemContainer container = client.getItemContainer(InventoryID.INVENTORY);
+            if (container != null) {
+                Item[] items = container.getItems();
+                long inventoryValue = Arrays.stream(items).flatMapToLong(item ->
+                        LongStream.of(calculateItemValue(item, ignoredItems))).sum();
+                long increment = _preDepositInventoryValue - inventoryValue;
+                // we've never banked, it's possible the player is only depositing... So, let's assign the last bank value
+                // to our current deposit amount...
+                if(_lastBankValue == Long.MIN_VALUE) {
+                    _lastBankValue = increment;
+                } else {
+                    _lastBankValue += increment;
+                }
+
+                updateInventoryValue(false, true);
+            }
+        }
     }
 
     @Subscribe
@@ -207,7 +253,7 @@ public class InventoryValuePlugin extends Plugin
                 if(itemPrices.size() == 1) {
                     ItemPrice price = itemPrices.get(0);
                     _herbs.put(price, herbQty);
-                    updateInventoryValue(false);
+                    updateInventoryValue(false, false);
                 }
             }
         }
@@ -222,7 +268,7 @@ public class InventoryValuePlugin extends Plugin
                 for(int i = 0; i < keys.size(); i++) {
                     ItemPrice price = _gemLookup.get(keys.get(i));
                     _gems.put(price, Integer.parseInt(values.get(i)));
-                    updateInventoryValue(false);
+                    updateInventoryValue(false, false);
                 }
             }
 
@@ -242,7 +288,7 @@ public class InventoryValuePlugin extends Plugin
                 if(itemPrices.size() == 1) {
                     ItemPrice price = itemPrices.get(0);
                     _seeds.put(price, seedQty);
-                    updateInventoryValue(false);
+                    updateInventoryValue(false, false);
                 }
             }
         }
