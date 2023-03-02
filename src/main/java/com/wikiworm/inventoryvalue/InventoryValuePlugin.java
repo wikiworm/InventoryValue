@@ -325,18 +325,6 @@ public class InventoryValuePlugin extends Plugin
     public long calculateItemValue(Item item, List<String> ignoredItems) {
         int itemId = item.getId();
         if(itemManager != null) {
-            if (itemId == ItemID.RUNE_POUCH || itemId == ItemID.RUNE_POUCH_L
-                    || itemId == ItemID.DIVINE_RUNE_POUCH || itemId == ItemID.DIVINE_RUNE_POUCH_L)
-            {
-                return handleRunePouch(item);
-            } else if(itemId == ItemID.GEM_BAG_12020 ||itemId == ItemID.OPEN_GEM_BAG) {
-                return handleGemBag();
-            } else if (itemId == ItemID.HERB_SACK || itemId == ItemID.OPEN_HERB_SACK) {
-                return handleHerbSack();
-            } else if (itemId == ItemID.SEED_BOX || itemId == ItemID.OPEN_SEED_BOX) {
-                return handleSeedBox();
-            }
-
             ItemComposition itemComposition = itemManager.getItemComposition(itemId);
             String itemName = itemComposition.getName();
 
@@ -345,8 +333,27 @@ public class InventoryValuePlugin extends Plugin
             } else if(itemId == ItemID.COINS_995) {
                 return item.getQuantity();
             } else if (ignoredItems.contains(itemName.toLowerCase())) {
+                log.info("ignored item: " + itemName.toLowerCase());
                 return 0L;
             }
+
+            if (itemId == ItemID.RUNE_POUCH ||
+                itemId == ItemID.RUNE_POUCH_L ||
+                itemId == ItemID.DIVINE_RUNE_POUCH ||
+                itemId == ItemID.DIVINE_RUNE_POUCH_L)
+            {
+                return handleRunePouch(item);
+            } else if(itemId == ItemID.GEM_BAG_12020 ||
+                      itemId == ItemID.OPEN_GEM_BAG) {
+                return handleGemBag();
+            } else if (itemId == ItemID.HERB_SACK ||
+                       itemId == ItemID.OPEN_HERB_SACK) {
+                return handleHerbSack();
+            } else if (itemId == ItemID.SEED_BOX ||
+                       itemId == ItemID.OPEN_SEED_BOX) {
+                return handleSeedBox();
+            }
+
 
             return (long) item.getQuantity() * (config.useHighAlchemyValue() ?
                     itemComposition.getHaPrice() : itemManager.getItemPrice(itemId));
